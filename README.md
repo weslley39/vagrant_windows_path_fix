@@ -1,16 +1,29 @@
-Windows-*nix VM Long Path Names Workaround
+Vagrant Windows Path Fix
 ============
+
+There are few known limitations when using Vagrant on Windows machine. One of these limitations is the lack of symbolic links support on synced folder.
 
 Windows limits path names length, and this little thing causes many problems when working with deep folder trees structures, like we usually have in nodejs projects.
 
-Quoting this [article](http://msdn.microsoft.com/en-us/library/aa365247(VS.85).aspx#maxpath)
+Most of the time, you can get away with ‘npm —no-bin-link’ solution. However, you need more robust solution if you are using complex tools such as Grunt or Yeoman.
 
->Maximum Path Length Limitation
->In the Windows API (with some exceptions discussed in the following paragraphs), the maximum length for a path is MAX_PATH, which is defined as 260 characters. A local path is structured in the following order: drive letter, colon, backslash, name components separated by backslashes, and a terminating null character. For example, the maximum path on drive D is "D:\some 256-character path string<NUL>" where "<NUL>" represents the invisible terminating null character for the current system codepage. (The characters < > are used here for visual clarity and cannot be part of a valid path string.)
+In this post, I’ll show you the proper way to add symbolic links support to your Vagrant machine.
 
-When you work inside a VM, you can have synced folder and symlinks, and with the brilliant solution posted [here](https://github.com/fideloper/Vaprobash/issues/183#issuecomment-36632374) by [jgoux](https://github.com/jgoux), we can create a folder that exists only inside the *nix VM and is linked to a folder inside your project (i.e node_modules for a nodejs project).
+First, you need to add this code snippet inside your Vagrantfile
 
-So, I created this little shell script that do all this stuff for you.
+```
+config.vm.provider "virtualbox" do |v|
+    v.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/v-root", "1"]
+end
+```
+
+VirtualBox disables symbolic links for security reasons. In order to pass this restriction, you need to boot up the Vagrant machine in Administrator mode.
+
+OBG: U NEDD TO RUN THE CMD OR POWERSHELL AS ADMINISTRATOR TO WORK
+
+After that, boot up the Vagrant machine normally with ‘vagrant up’ command. Wait until the machine boots up, SSH to the machine and try to create symbolic link in the synced folder.
+
+##But, what this shit do sr.?
 
 It will create a folder inside your VMs home folder (which I hope is not mapped to a windows host folder) called "win_host_fixes", and when you run this script, it will create a new folder with a random name and a symlink in your project folder with the name that you provide.
 
@@ -18,3 +31,5 @@ It will create a folder inside your VMs home folder (which I hope is not mapped 
 ```bash
 # On your project folder, type this to create the link
 sh win_host_fix.sh SYMLINK_NAME
+EX: sh win_host_fix.sh node_modules
+EX: sh win_host_fix.sh bower_components
